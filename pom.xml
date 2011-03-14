@@ -19,9 +19,9 @@
     </distributionManagement>
     
     <scm>
-        <url>http://code.djc.id.au/hg/lucene-multilingual-master/</url>
-        <connection>scm:hg:http://code.djc.id.au/hg/lucene-multilingual-master/</connection>
-        <developerConnection>scm:hg:file://${project.basedir}</developerConnection>
+        <url>https://github.com/danc86/lucene-multilingual/</url>
+        <connection>scm:git:git://github.com/danc86/lucene-multilingual.git</connection>
+        <developerConnection>scm:git:file://${project.basedir}</developerConnection>
     </scm>
 
     <build>
