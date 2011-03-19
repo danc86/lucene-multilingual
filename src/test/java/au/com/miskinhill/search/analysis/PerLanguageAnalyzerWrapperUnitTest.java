@@ -1,13 +1,12 @@
 package au.com.miskinhill.search.analysis;
 
-import static org.easymock.classextension.EasyMock.*;
-import static org.junit.Assert.assertThat;
-import static org.junit.matchers.JUnitMatchers.hasItems;
+import static org.easymock.EasyMock.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
-import java.io.Reader;
-import java.io.StringReader;
+import java.util.Arrays;
 
-import org.apache.lucene.analysis.Analyzer;
+import org.junit.Before;
 import org.junit.Test;
 
 public class PerLanguageAnalyzerWrapperUnitTest {
@@ -15,67 +14,34 @@ public class PerLanguageAnalyzerWrapperUnitTest {
 	private Analyzer defaultAnalyzer = createMock(Analyzer.class);
 	private Analyzer enAnalyzer = createMock(Analyzer.class);
 	private Analyzer ruAnalyzer = createMock(Analyzer.class);
+	private PerLanguageAnalyzerMap plam;
+	
+	@Before
+	public void setUp() {
+	   plam = new PerLanguageAnalyzerMap(defaultAnalyzer);
+       plam.addAnalyzer("en", enAnalyzer);
+       plam.addAnalyzer("ru", ruAnalyzer);
+	}
 
 	@Test
 	public void testGetAnalyzers() {
-		PerLanguageAnalyzerWrapper plaw = 
-				new PerLanguageAnalyzerWrapper(defaultAnalyzer);
-		plaw.addAnalyzer("en", enAnalyzer);
-		plaw.addAnalyzer("ru", ruAnalyzer);
-		assertThat(plaw.getAnalyzers(), 
-				hasItems(defaultAnalyzer, enAnalyzer, ruAnalyzer));
-	}
-	
-	@Test
-	public void testTokenStreamNoLanguage() {
-		expect(defaultAnalyzer.tokenStream(
-				isA(String.class), isA(Reader.class))).andReturn(null);
-		replay(defaultAnalyzer, enAnalyzer, ruAnalyzer);
-		PerLanguageAnalyzerWrapper plaw = 
-				new PerLanguageAnalyzerWrapper(defaultAnalyzer);
-		plaw.addAnalyzer("en", enAnalyzer);
-		plaw.addAnalyzer("ru", ruAnalyzer);
-		plaw.tokenStream("asdf", new StringReader(""));
-		verify();
+		assertThat(plam.getAnalyzers(), 
+				equalTo(Arrays.asList(defaultAnalyzer, enAnalyzer, ruAnalyzer)));
 	}
 	
 	@Test
 	public void testTokenStreamEmptyLanguage() {
-		expect(defaultAnalyzer.tokenStream(
-				isA(String.class), isA(Reader.class))).andReturn(null);
-		replay(defaultAnalyzer, enAnalyzer, ruAnalyzer);
-		PerLanguageAnalyzerWrapper plaw = 
-				new PerLanguageAnalyzerWrapper(defaultAnalyzer);
-		plaw.addAnalyzer("en", enAnalyzer);
-		plaw.addAnalyzer("ru", ruAnalyzer);
-		plaw.tokenStream("", "asdf", new StringReader(""));
-		verify();
+	    assertThat(plam.getAnalyzer(""), equalTo(defaultAnalyzer));
 	}
 	
 	@Test
 	public void testTokenStreamNullLanguage() {
-		expect(defaultAnalyzer.tokenStream(
-				isA(String.class), isA(Reader.class))).andReturn(null);
-		replay(defaultAnalyzer, enAnalyzer, ruAnalyzer);
-		PerLanguageAnalyzerWrapper plaw = 
-				new PerLanguageAnalyzerWrapper(defaultAnalyzer);
-		plaw.addAnalyzer("en", enAnalyzer);
-		plaw.addAnalyzer("ru", ruAnalyzer);
-		plaw.tokenStream(null, "asdf", new StringReader(""));
-		verify();
+	    assertThat(plam.getAnalyzer(null), equalTo(defaultAnalyzer));
 	}
 	
 	@Test
 	public void testTokenStreamSomeLanguage() {
-		expect(enAnalyzer.tokenStream(
-				isA(String.class), isA(Reader.class))).andReturn(null);
-		replay(defaultAnalyzer, enAnalyzer, ruAnalyzer);
-		PerLanguageAnalyzerWrapper plaw = 
-				new PerLanguageAnalyzerWrapper(defaultAnalyzer);
-		plaw.addAnalyzer("en", enAnalyzer);
-		plaw.addAnalyzer("ru", ruAnalyzer);
-		plaw.tokenStream("en", "asdf", new StringReader(""));
-		verify();
+	    assertThat(plam.getAnalyzer("en"), equalTo(enAnalyzer));
 	}
 	
 }

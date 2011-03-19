@@ -1,17 +1,11 @@
 package au.com.miskinhill.search.analysis;
 
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-
 /**
- * In the same vein as
- * {@link org.apache.lucene.analysis.PerFieldAnalyzerWrapper}, this analyzer
- * delegates to a sub-analyzer according to based on the language of the text
+ * Returns an analyzer according to based on the language of the text
  * being analysed. The default sub-analyzer is given in the constructor; this is
  * used when the language is not specified, or when a language is specified for
  * which we have no specific sub-analyzer. Use
@@ -19,17 +13,16 @@ import org.apache.lucene.analysis.TokenStream;
  * language.
  * <p>
  * Note that languages are matched by prefix, so that if a sub-analyzer has been
- * added for "en" (but not "en-AU"), it will be selected when analysing text
- * whose language is given as "en-AU".
+ * added for "en" (but not "en-AU"), it will be returned for "en-AU".
  */
-public class PerLanguageAnalyzerWrapper extends Analyzer {
+public class PerLanguageAnalyzerMap {
     
-    private static final Logger LOG = Logger.getLogger(PerLanguageAnalyzerWrapper.class.getName());
+    private static final Logger LOG = Logger.getLogger(PerLanguageAnalyzerMap.class.getName());
 
 	protected Trie<Analyzer> analyzers;
 	private List<Analyzer> analyzersList = new ArrayList<Analyzer>(); // easier than traversing the trie
 	
-	public PerLanguageAnalyzerWrapper(Analyzer defaultAnalyzer) {
+	public PerLanguageAnalyzerMap(Analyzer defaultAnalyzer) {
 		analyzers = new Trie<Analyzer>(defaultAnalyzer);
 		analyzersList.add(defaultAnalyzer);
 	}
@@ -45,19 +38,19 @@ public class PerLanguageAnalyzerWrapper extends Analyzer {
 	public List<Analyzer> getAnalyzers() {
 		return analyzersList;
 	}
-
-	@Override
-	public TokenStream tokenStream(String fieldName, Reader reader) {
-	    LOG.warning("Using default analyzer");
-		return tokenStream("", fieldName, reader);
-	}
 	
-	public TokenStream tokenStream(String language, String fieldName, Reader reader) {
+	/**
+	 * Returns an appropriate analyzer for the given language.
+	 * 
+	 * @param language ISO-639 language identifier
+	 */
+	// XXX TODO use java.util.Locale eventually (maybe with Locale#forLanguageTag added in 1.7?)
+	public Analyzer getAnalyzer(String language) {
 		if (language == null) language = "";
 		Analyzer a = analyzers.get(language);
 		if (a == analyzersList.get(0))
 		    LOG.warning("Using default analyzer for language " + language);
-		return a.tokenStream(fieldName, reader);
+		return a;
 	}
 
 }

@@ -2,27 +2,32 @@ package au.com.miskinhill.search.analysis;
 
 import java.io.IOException;
 
-import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 
 public class OffsetTokenFilter extends TokenFilter {
-	
+
+    private final OffsetAttribute offsetAttribute;
 	private int offset;
 
 	protected OffsetTokenFilter(TokenStream input, int offset) {
 		super(input);
 		this.offset = offset;
+        this.offsetAttribute = addAttribute(OffsetAttribute.class);
 	}
 	
-	@Override
-	public Token next(Token reusableToken) throws IOException {
-		Token retval = input.next(reusableToken);
-		if (retval != null && offset != 0) {
-			retval.setStartOffset(retval.startOffset() + offset);
-			retval.setEndOffset(retval.endOffset() + offset);
-		}
-		return retval;
-	}
+    @Override
+    public boolean incrementToken() throws IOException {
+        if (input.incrementToken()) {
+            if (offset != 0) {
+                offsetAttribute.setOffset(offsetAttribute.startOffset() + offset,
+                        offsetAttribute.endOffset() + offset);
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 
 }

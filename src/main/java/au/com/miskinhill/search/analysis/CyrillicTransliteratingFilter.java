@@ -1,46 +1,57 @@
 package au.com.miskinhill.search.analysis;
 
 import java.io.IOException;
+import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
-import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 
 /**
  * Assumes that tokens have already been lower-cased.
  */
 public class CyrillicTransliteratingFilter extends TokenFilter {
     
-    private static final String CYRILLIC_PATTERN = ".*[а-я]+.*";
-    
-    private Token transliterated = null;
+    private static final Pattern CYRILLIC_PATTERN = Pattern.compile("[а-я]+");
+
+    private final TermAttribute termAttribute;
+    private final PositionIncrementAttribute posIncAttribute;
+    private String transliterated = null;
+    private State transliteratedState = null;
     
     protected CyrillicTransliteratingFilter(TokenStream input) {
         super(input);
+        this.termAttribute = addAttribute(TermAttribute.class);
+        this.posIncAttribute = addAttribute(PositionIncrementAttribute.class);
     }
     
     @Override
-    public Token next(Token reusableToken) throws IOException {
-        Token tok;
+    public boolean incrementToken() throws IOException {
         if (transliterated == null) {
-            tok = input.next(reusableToken);
-            if (tok == null) return null;
-            if (needsTransliterating(tok.term())) {
-                transliterated = (Token) tok.clone();
-                transliterated.setTermBuffer(transliterate(transliterated.term()));
-                transliterated.setPositionIncrement(0);
+            if (!input.incrementToken())
+                return false;
+            CharSequence text = CharBuffer.wrap(termAttribute.termBuffer(),
+                    0, termAttribute.termLength());
+            if (needsTransliterating(text)) {
+                transliterated = transliterate(text);
+                transliteratedState = captureState();
             }
         } else {
-            tok = transliterated;
+            restoreState(transliteratedState);
+            termAttribute.setTermBuffer(transliterated);
+            posIncAttribute.setPositionIncrement(0);
             transliterated = null;
+            transliteratedState = null;
         }
-        return tok;
+        return true;
     }
     
-    private static boolean needsTransliterating(String text) {
-        return (text.matches(CYRILLIC_PATTERN));
+    private static boolean needsTransliterating(CharSequence text) {
+        return (CYRILLIC_PATTERN.matcher(text).find());
     }
     
     private static final Map<Character, String> TRANSLITERATION_TABLE = new HashMap<Character, String>();
