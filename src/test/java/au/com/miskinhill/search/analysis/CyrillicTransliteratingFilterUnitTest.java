@@ -11,34 +11,35 @@ import java.util.Queue;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.util.AttributeSource;
 import org.junit.Test;
 
 public class CyrillicTransliteratingFilterUnitTest {
     
     private static final class FakeTokenStream extends TokenStream {
-        private final TermAttribute termAttribute;
+        private final CharTermAttribute termAttribute;
         private final OffsetAttribute offsetAttribute;
         private final PositionIncrementAttribute posIncAttribute;
         private final Queue<Token> tokens;
         
         public FakeTokenStream(Token... tokens) {
             this.tokens = new LinkedList<Token>(Arrays.asList(tokens));
-            this.termAttribute = addAttribute(TermAttribute.class);
+            this.termAttribute = addAttribute(CharTermAttribute.class);
             this.offsetAttribute = addAttribute(OffsetAttribute.class);
             this.posIncAttribute = addAttribute(PositionIncrementAttribute.class);
         }
 
         @Override
-        public boolean incrementToken() throws IOException {
+        public final boolean incrementToken() throws IOException {
             if (tokens.isEmpty())
                 return false;
             clearAttributes();
             Token next = tokens.remove();
-            termAttribute.setTermBuffer(next.term());
+            termAttribute.setEmpty();
+            termAttribute.append(next);
             offsetAttribute.setOffset(next.startOffset(), next.endOffset());
             posIncAttribute.setPositionIncrement(next.getPositionIncrement());
             return true;
@@ -48,7 +49,7 @@ public class CyrillicTransliteratingFilterUnitTest {
     @Test
     public void shouldPassOnTokensWithoutCyrillicUntouched() throws IOException {
         Token asdf = new Token();
-        asdf.setTermBuffer("asdf");
+        asdf.append("asdf");
         asdf.setStartOffset(1);
         asdf.setEndOffset(4);
         TokenFilter filter = new CyrillicTransliteratingFilter(
@@ -61,7 +62,7 @@ public class CyrillicTransliteratingFilterUnitTest {
     @Test
     public void shouldTransliterateCyrillicTokens() throws IOException {
         Token igraCyrillic = new Token();
-        igraCyrillic.setTermBuffer("игра");
+        igraCyrillic.append("игра");
         igraCyrillic.setStartOffset(1);
         igraCyrillic.setEndOffset(4);
         TokenFilter filter = new CyrillicTransliteratingFilter(
@@ -76,7 +77,7 @@ public class CyrillicTransliteratingFilterUnitTest {
     @Test
     public void shouldTransliterateTokensWithMixedLatinAndCyrillic() throws IOException {
         Token mixed = new Token();
-        mixed.setTermBuffer("interнет");
+        mixed.append("interнет");
         mixed.setStartOffset(1);
         mixed.setEndOffset(8);
         TokenFilter filter = new CyrillicTransliteratingFilter(
@@ -90,7 +91,7 @@ public class CyrillicTransliteratingFilterUnitTest {
     
     private void assertAttributes(AttributeSource source, String term,
             int start, int end, int posInc) {
-        assertThat(source.getAttribute(TermAttribute.class).term(),
+        assertThat(source.getAttribute(CharTermAttribute.class).toString(),
                 equalTo(term));
         assertThat(source.getAttribute(OffsetAttribute.class).startOffset(),
                 equalTo(start));

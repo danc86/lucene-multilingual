@@ -76,7 +76,7 @@ public class XMLTokenizer extends TokenStream {
     }
 
     @Override
-    public boolean incrementToken() throws IOException {
+    public final boolean incrementToken() throws IOException {
         clearAttributes();
 
         // first try our current string delegate, if we have one

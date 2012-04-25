@@ -1,15 +1,14 @@
 package au.com.miskinhill.search.analysis;
 
 import java.io.IOException;
-import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 
 /**
  * Assumes that tokens have already been lower-cased.
@@ -18,31 +17,30 @@ public class CyrillicTransliteratingFilter extends TokenFilter {
     
     private static final Pattern CYRILLIC_PATTERN = Pattern.compile("[а-я]+");
 
-    private final TermAttribute termAttribute;
+    private final CharTermAttribute termAttribute;
     private final PositionIncrementAttribute posIncAttribute;
     private String transliterated = null;
     private State transliteratedState = null;
     
     protected CyrillicTransliteratingFilter(TokenStream input) {
         super(input);
-        this.termAttribute = addAttribute(TermAttribute.class);
+        this.termAttribute = addAttribute(CharTermAttribute.class);
         this.posIncAttribute = addAttribute(PositionIncrementAttribute.class);
     }
     
     @Override
-    public boolean incrementToken() throws IOException {
+    public final boolean incrementToken() throws IOException {
         if (transliterated == null) {
             if (!input.incrementToken())
                 return false;
-            CharSequence text = CharBuffer.wrap(termAttribute.termBuffer(),
-                    0, termAttribute.termLength());
-            if (needsTransliterating(text)) {
-                transliterated = transliterate(text);
+            if (needsTransliterating(termAttribute)) {
+                transliterated = transliterate(termAttribute);
                 transliteratedState = captureState();
             }
         } else {
             restoreState(transliteratedState);
-            termAttribute.setTermBuffer(transliterated);
+            termAttribute.setEmpty();
+            termAttribute.append(transliterated);
             posIncAttribute.setPositionIncrement(0);
             transliterated = null;
             transliteratedState = null;
